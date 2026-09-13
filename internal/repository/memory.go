@@ -13,11 +13,10 @@ type InMemory struct {
 func NewInMemoryStore()*InMemory{
 	// initialize the map (and mutex) to prevent
 	// panic: runtime error: assignment to entry in nil map
-	s := &InMemory{
+	return &InMemory{
 		mut: new(sync.RWMutex),
 		kvpair: make(map[string]string),
 	}
-	return s
 }
 
 func (store *InMemory)Set(key string, value string) error {
