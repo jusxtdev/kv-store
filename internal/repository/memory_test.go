@@ -9,12 +9,7 @@ import (
 func newInMemStore(t *testing.T) *InMemory {
 	t.Helper()
 
-	// initialize the map (and mutex) to prevent
-	// panic: runtime error: assignment to entry in nil map
-	store := &InMemory{
-		mut: new(sync.RWMutex),
-		kvpair: make(map[string]string),
-	}
+	store := NewInMemoryStore()
 	return store
 }
 

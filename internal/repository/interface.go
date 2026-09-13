@@ -1,6 +1,6 @@
 package repository
 
-type Store interface {
+type StoreRepository interface {
 	Set(key string, value string) error
 	Get(key string) (string,error)
 	Update(key string, value string) error
