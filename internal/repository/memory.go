@@ -6,7 +6,7 @@ import (
 )
 
 type InMemory struct {
-	mut sync.RWMutex 
+	mut *sync.RWMutex 
 	kvpair map[string]string
 }
 
@@ -105,5 +105,17 @@ func (store *InMemory)keyExists(key string) bool {
 		return true
 	} else {
 		return false
+	}
+}
+
+var SeedData = map[string]string{
+	"name" : "yingshai",
+	"game" : "nine sols",
+	"x" : "12",
+	"pi" : "3.14", 
+}
+func (store *InMemory)Seed(){
+	for k,v := range store.kvpair{
+		store.Set(k, v)
 	}
 }
