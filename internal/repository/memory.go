@@ -2,19 +2,22 @@ package repository
 
 import (
 	"errors"
+	"kvstore/internal/wal"
 	"sync"
 )
 
 type InMemory struct {
 	mut *sync.RWMutex 
+	wal *wal.WAL
 	kvpair map[string]string
 }
 
-func NewInMemoryStore()*InMemory{
+func NewInMemoryStore(w *wal.WAL)*InMemory{
 	// initialize the map (and mutex) to prevent
 	// panic: runtime error: assignment to entry in nil map
 	return &InMemory{
 		mut: new(sync.RWMutex),
+		wal: w,
 		kvpair: make(map[string]string),
 	}
 }

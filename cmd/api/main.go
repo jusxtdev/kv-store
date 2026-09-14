@@ -7,14 +7,21 @@ import (
 
 	"kvstore/internal/handler"
 	"kvstore/internal/repository"
+	"kvstore/internal/wal"
 )
 
 func main(){
-	store := repository.NewInMemoryStore()
+	// wal object used by the store service for write-ahead logging
+	w := wal.NewWAL("wal.log")
+
+	store := repository.NewInMemoryStore(w)
+
+	// replay the wal records after the store is created
+
 	h := handler.NewHandler(store)
-	
 	mux := http.NewServeMux()
 
+	/* -- ROUTES -- */
 	mux.HandleFunc("GET /", handler.Health)
 
 	mux.HandleFunc("GET /kv/all", h.GETKeys)
@@ -22,7 +29,6 @@ func main(){
 
 	mux.HandleFunc("GET /kv/{key}", h.GETvalue)
 	mux.HandleFunc("GET /kv/{key}/", h.GETvalue)
-
 
 	mux.HandleFunc("POST /kv", h.POSTkeyvalue)
 	mux.HandleFunc("POST /kv/", h.POSTkeyvalue)
