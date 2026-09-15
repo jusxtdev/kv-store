@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"kvstore/internal/handler"
@@ -12,7 +13,10 @@ import (
 
 func main(){
 	// wal object used by the store service for write-ahead logging
-	w := wal.NewWAL("wal.log")
+	w, err := wal.Open("wal.log")
+	if err != nil {
+		log.Fatalf("WAL initialization failed; refusing to start: %v", err)
+	}	
 
 	store := repository.NewInMemoryStore(w)
 
@@ -42,7 +46,7 @@ func main(){
 	mux.HandleFunc("DELETE /kv/{key}", h.DELvalue)
 	mux.HandleFunc("DELETE /kv/{key}/", h.DELvalue)
 
-	err := http.ListenAndServe(":8080", mux)
+	err = http.ListenAndServe(":8080", mux)
 	if errors.Is(err, http.ErrServerClosed){
 		fmt.Println("Server Closed")
 	} else if err != nil{
