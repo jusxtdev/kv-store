@@ -33,6 +33,13 @@ func (store *InMemory)Set(key string, value string) error {
 		return errors.New("key already exists")
 	}
 
+	// first log the operation to wal
+	record := store.wal.Serialize("SET", key, value)
+	err := store.wal.Write(record)
+	if err != nil {
+		return err
+	}
+
 	// set the key 
 	store.kvpair[key] = value
 	return nil
