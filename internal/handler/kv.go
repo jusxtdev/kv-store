@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"kvstore/internal/repository"
 	"net/http"
 )
@@ -138,7 +139,11 @@ func (h *Handler) POSTClear(w http.ResponseWriter, r *http.Request){
 		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
 		return
 	}
-	h.store.Clear()
+	if err := h.store.Clear(); err != nil {
+		fmt.Println(err)
+		WriteJSONResponse(w, http.StatusInternalServerError, Response{false, "internal server error", nil})
+		return
+	}
 	WriteJSONResponse(w, http.StatusOK, Response{true, "cleared keys", nil})
 
 }

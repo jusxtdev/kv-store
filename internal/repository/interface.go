@@ -7,5 +7,5 @@ type StoreRepository interface {
 	Delete(key string) error
 	Exists(key string) bool
 	Keys() []string
-	Clear()
+	Clear() error
 }

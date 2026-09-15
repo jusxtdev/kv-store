@@ -66,6 +66,13 @@ func (store *InMemory)Update(key string, value string) error {
 	if !exists{
 		return errors.New("key not found")
 	}
+	
+	// first log the operation to wal
+	record := store.wal.Serialize("UPDATE", key, value)
+	err := store.wal.Write(record)
+	if err != nil {
+		return err
+	}
 
 	store.kvpair[key] = value
 	return nil
@@ -78,6 +85,13 @@ func (store *InMemory)Delete(key string) error {
 	exists := store.keyExists(key)
 	if !exists{
 		return errors.New("key not found")
+	}
+
+	// first log the operation to wal
+	record := store.wal.Serialize("DELETE", key, "")
+	err := store.wal.Write(record)
+	if err != nil {
+		return err
 	}
 
 	delete(store.kvpair, key)
@@ -107,11 +121,19 @@ func (store *InMemory)Keys() []string {
 	return allkeys
 }
 
-func (store *InMemory)Clear() {
+func (store *InMemory) Clear() error {
 	store.mut.Lock()
 	defer store.mut.Unlock()
 
+	// first log the operation to wal
+	record := store.wal.Serialize("CLEAR", "", "")
+	err := store.wal.Write(record)
+	if err != nil {
+		return err
+	}
+
 	clear(store.kvpair)
+	return nil
 }
 
 /* === HELPERS === */
