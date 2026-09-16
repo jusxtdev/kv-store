@@ -21,6 +21,10 @@ func main(){
 	store := repository.NewInMemoryStore(w)
 
 	// replay the wal records after the store is created
+	records, err := w.Replay()
+	if err != nil {
+		log.Fatalf("WAL replay failed; refusing to start %v", err)
+	}
 
 	h := handler.NewHandler(store)
 	mux := http.NewServeMux()

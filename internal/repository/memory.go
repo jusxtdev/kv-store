@@ -2,8 +2,9 @@ package repository
 
 import (
 	"errors"
-	"kvstore/internal/wal"
 	"sync"
+
+	"kvstore/internal/wal"
 )
 
 type InMemory struct {
@@ -122,6 +123,15 @@ func (store *InMemory)Keys() []string {
 }
 
 func (store *InMemory) Clear() error {
+	/*
+	TWO CHOICES
+	1 either clear the wal.log file so that old operations are removed hence space is saved
+	2 or keep the clear operation as it is and skip the entries before clear while replaying
+	
+	if we clear the wal.log file and then the program crashes before clearing the in-memory
+	then there is no way to recover the latest state
+	Hence, i'll keep the wal.log file as it is for the MVP
+	*/
 	store.mut.Lock()
 	defer store.mut.Unlock()
 
