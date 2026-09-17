@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type WAL struct {
 	logFilePath string
+	currentOprId int	// 1 based index for each record
 }
 
 // '|' is used as delimeter in Record strings (delimeted in Serialize()) 
@@ -29,11 +31,11 @@ func Open(logFilePath string) (*WAL, error) {
 	defer file.Close()
 
 	// return wal
-	return &WAL{logFilePath}, nil
+	return &WAL{logFilePath, 1}, nil
 }
 
 func (w *WAL) Serialize(operation, key, value string) []byte {
-	r := fmt.Sprintf("%s|%s|%s\n", operation, key, value)
+	r := fmt.Sprintf("%d|%s|%s|%s\n", w.currentOprId, operation, key, value)
 	return []byte(r)
 }
 
@@ -49,6 +51,9 @@ func (w *WAL) Write(record []byte) error {
 	}
 	defer f.Close()
 
+	// increment wal operation id
+	w.currentOprId = w.currentOprId + 1
+	
 	// write bytes to the operating systems file cache
 	if _, err := f.Write(record); err != nil {
 		return fmt.Errorf("cannot write to wal log file - %s, record - %s", w.logFilePath, string(record))
@@ -122,9 +127,10 @@ func parseLine(line string) (Record, error) {
 	// if the line is like - "hello there" i.e. neither a valid delimeter nor a valid operation written
 	// then an empty record with error is returned
 
+
 	// parse operation
 	var operation Operation
-	oprStr := lineSlice[0]
+	oprStr := lineSlice[1]
 	switch oprStr {
 	case "SET":
 		operation = Set
@@ -140,11 +146,20 @@ func parseLine(line string) (Record, error) {
 	}
 	rec.Operation = operation
 
-	if len(lineSlice) >= 2 {
-		rec.Key = string(lineSlice[1])
+	// parse operation id
+	opIdStr := lineSlice[0]
+	opId, err := strconv.Atoi(opIdStr)
+	if err != nil {
+		return Record{}, fmt.Errorf("some error while parsing operation id : %v", err)
 	}
+	rec.OpId = opId
+
+	// opId Opr key val
 	if len(lineSlice) >= 3 {
-		rec.Value = string(lineSlice[2])
+		rec.Key = string(lineSlice[2])
+	}
+	if len(lineSlice) >= 4 {
+		rec.Value = string(lineSlice[3])
 	}
 	return rec, nil
 }

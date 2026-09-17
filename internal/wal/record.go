@@ -10,6 +10,7 @@ const (
 )
 
 type Record struct{
+	OpId int
 	Operation Operation
 	Key string
 	Value string
