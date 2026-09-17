@@ -22,7 +22,7 @@ func main(){
 		log.Fatal(err)
 	}
 
-	// enable write ahead logging after the replay
+	// enable Allow services to log to WAL after the replay
 	store.EnableWAL()
 
 	h := handler.NewHandler(store)
