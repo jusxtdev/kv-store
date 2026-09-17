@@ -1,8 +1,0 @@
-SET|d|sadasd
-SET|d2|sadasd
-SET|d3|sadasd
-SET|d4|sadasd
-UPDATE|d|newval
-DELETE|d4|
-CLEAR||
-SET|d4|sadasd
