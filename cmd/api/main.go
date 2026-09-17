@@ -11,24 +11,15 @@ import (
 	"kvstore/internal/wal"
 )
 
+var WALFilePath = "wal.log"
+
 func main(){
-	// wal object used by the store service for write-ahead logging
-	w, err := wal.Open("wal.log")
-	if err != nil {
-		log.Fatalf("WAL initialization failed; refusing to start: %v", err)
-	}	
+	w, store := Init()
 
-	store := repository.NewInMemoryStore(w)
-
-	// replay the wal records after the store is created
-	records, err := w.Replay()
+	// replay wal log 
+	err := ReApplyWAL(w, store)
 	if err != nil {
-		log.Fatalf("WAL replay (parsing log file) failed; refusing to start %v", err)
-	}
-
-	err = store.Apply(records)
-	if err != nil {
-		log.Fatalf("WAL replay (applying records) failed; refusing to start %v", err)
+		log.Fatal(err)
 	}
 
 	// enable write ahead logging after the replay
@@ -64,4 +55,30 @@ func main(){
 	} else if err != nil{
 		fmt.Printf("error : %s\n", err)
 	}
+}
+
+func Init() (*wal.WAL, *repository.InMemory) {
+	// wal object used by the store service for write-ahead logging
+	w, err := wal.Open(WALFilePath)
+	if err != nil {
+		log.Fatalf("WAL initialization failed; refusing to start: %v", err)
+	}	
+
+	store := repository.NewInMemoryStore(w)
+
+	return w, store
+}
+
+func ReApplyWAL(w *wal.WAL, store *repository.InMemory) error {
+	// replay the wal records after the store is created
+	records, err := w.Replay()
+	if err != nil {
+		return fmt.Errorf("WAL replay (parsing log file) failed; refusing to start %v", err)
+	}
+
+	err = store.Apply(records)
+	if err != nil {
+		return fmt.Errorf("WAL replay (applying records) failed; refusing to start %v", err)
+	}
+	return nil
 }
