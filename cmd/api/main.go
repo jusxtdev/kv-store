@@ -23,8 +23,16 @@ func main(){
 	// replay the wal records after the store is created
 	records, err := w.Replay()
 	if err != nil {
-		log.Fatalf("WAL replay failed; refusing to start %v", err)
+		log.Fatalf("WAL replay (parsing log file) failed; refusing to start %v", err)
 	}
+
+	err = store.Apply(records)
+	if err != nil {
+		log.Fatalf("WAL replay (applying records) failed; refusing to start %v", err)
+	}
+
+	// enable write ahead logging after the replay
+	store.EnableWAL()
 
 	h := handler.NewHandler(store)
 	mux := http.NewServeMux()

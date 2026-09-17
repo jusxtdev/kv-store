@@ -1,6 +1,7 @@
 SET|d|sadasd
-SET|x|sadasd
-SET|989|sadass2332d
-UPDATE|989|money follows
-DELETE|d|
+SET|d2|sadasd
+SET|d3|sadasd
+SET|d4|sadasd
+UPDATE|d|newval
+DELETE|d4|
 CLEAR||

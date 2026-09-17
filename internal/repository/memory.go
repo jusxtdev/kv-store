@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"kvstore/internal/wal"
@@ -10,6 +11,7 @@ import (
 type InMemory struct {
 	mut *sync.RWMutex 
 	wal *wal.WAL
+	appendToWALFlag bool
 	kvpair map[string]string
 }
 
@@ -21,6 +23,45 @@ func NewInMemoryStore(w *wal.WAL)*InMemory{
 		wal: w,
 		kvpair: make(map[string]string),
 	}
+}
+
+func (store *InMemory) EnableWAL() {
+	store.appendToWALFlag = true
+}
+
+func (store *InMemory) Apply(records []wal.Record) error {
+	// iterate over records
+	for index, record := range records{
+		// match the operation
+		switch record.Operation{
+		case wal.Set:
+			key := record.Key
+			value := record.Value
+			err := store.Set(key, value)
+			if err != nil {
+				return fmt.Errorf("'%v' on SET operation with index(0-based) %d", err, index)
+			}
+		case wal.Update:
+			key := record.Key
+			value := record.Value
+			err := store.Update(key, value)
+			if err != nil {
+				return fmt.Errorf("'%v' on UPDATE operation with index(0-based) %d", err, index)
+			}
+		case wal.Delete:
+			key := record.Key
+			err := store.Delete(key)
+			if err != nil {
+				return fmt.Errorf("'%v' on DELETE operation with index(0-based) %d", err, index)
+			}
+		case wal.Clear:
+			err := store.Clear()
+			if err != nil {
+				return fmt.Errorf("'%v' on CLEAR operation with index(0-based) %d", err, index)
+			}
+		} 
+	}
+	return nil
 }
 
 func (store *InMemory)Set(key string, value string) error {
@@ -35,10 +76,12 @@ func (store *InMemory)Set(key string, value string) error {
 	}
 
 	// first log the operation to wal
-	record := store.wal.Serialize("SET", key, value)
-	err := store.wal.Write(record)
-	if err != nil {
-		return err
+	if store.appendToWALFlag {
+		record := store.wal.Serialize("SET", key, value)
+		err := store.wal.Write(record)
+		if err != nil {
+			return err
+		}
 	}
 
 	// set the key 
@@ -69,10 +112,12 @@ func (store *InMemory)Update(key string, value string) error {
 	}
 	
 	// first log the operation to wal
-	record := store.wal.Serialize("UPDATE", key, value)
-	err := store.wal.Write(record)
-	if err != nil {
-		return err
+	if store.appendToWALFlag {
+		record := store.wal.Serialize("UPDATE", key, value)
+		err := store.wal.Write(record)
+		if err != nil {
+			return err
+		}
 	}
 
 	store.kvpair[key] = value
@@ -89,10 +134,12 @@ func (store *InMemory)Delete(key string) error {
 	}
 
 	// first log the operation to wal
-	record := store.wal.Serialize("DELETE", key, "")
-	err := store.wal.Write(record)
-	if err != nil {
-		return err
+	if store.appendToWALFlag {
+		record := store.wal.Serialize("DELETE", key, "")
+		err := store.wal.Write(record)
+		if err != nil {
+			return err
+		}
 	}
 
 	delete(store.kvpair, key)
@@ -136,10 +183,12 @@ func (store *InMemory) Clear() error {
 	defer store.mut.Unlock()
 
 	// first log the operation to wal
-	record := store.wal.Serialize("CLEAR", "", "")
-	err := store.wal.Write(record)
-	if err != nil {
-		return err
+	if store.appendToWALFlag {
+		record := store.wal.Serialize("CLEAR", "", "")
+		err := store.wal.Write(record)
+		if err != nil {
+			return err
+		}
 	}
 
 	clear(store.kvpair)
