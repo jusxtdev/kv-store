@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"kvstore/internal/wal"
 	"strconv"
 	"sync"
 	"testing"
@@ -9,7 +10,11 @@ import (
 func newInMemStore(t *testing.T) *InMemory {
 	t.Helper()
 
-	store := NewInMemoryStore()
+	// create a dummy wal object
+	w := wal.WAL{}
+	store := NewInMemoryStore(&w)
+	// by default no write-ahead loging will be done
+	// to enable it we have to call store.EnableWAL()
 	return store
 }
 
