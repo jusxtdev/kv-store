@@ -61,6 +61,25 @@ func (w *WAL) Write(record []byte) error {
 	return nil
 }
 
+func (w *WAL) Close() error {
+	// open log file
+	f, err := os.OpenFile(
+		w.logFilePath,
+		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
+		0644,
+	)
+	if err != nil {
+		return fmt.Errorf("cannot open wal log file - %s", w.logFilePath)
+	}
+	defer f.Close()
+
+	// ask os to write the file cache to hard-disk before closing
+	if err := f.Sync(); err != nil {
+		return fmt.Errorf("cannot sync wal log file - %s", w.logFilePath)
+	}
+	return nil
+}
+
 func (w *WAL)Replay() ([]Record, error) {
 	var records []Record
 

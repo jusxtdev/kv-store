@@ -14,7 +14,7 @@ import (
 var WALFilePath = "wal.log"
 
 func main(){
-	w, store := Init()
+	w, store := Init(WALFilePath)
 
 	// replay wal log 
 	err := ReApplyWAL(w, store)
@@ -55,9 +55,14 @@ func main(){
 	} else if err != nil{
 		fmt.Printf("error : %s\n", err)
 	}
+
+	// sync os file cache to hard-disk if any on shutdown
+	if err = w.Close(); err != nil {
+		log.Fatalf("cannot shutdown wal; error - %v", err)
+	}
 }
 
-func Init() (*wal.WAL, *repository.InMemory) {
+func Init(WALFilePath string) (*wal.WAL, *repository.InMemory) {
 	// wal object used by the store service for write-ahead logging
 	w, err := wal.Open(WALFilePath)
 	if err != nil {
