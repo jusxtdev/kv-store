@@ -35,6 +35,16 @@ func (store *InMemory) GetCurrentState() KVMap {
 	return store.kvmap
 } 
 
+func (store *InMemory) SetState(lastState map[string]string) error {
+	for key, value := range lastState {
+		err := store.Set(key, value)
+		if err != nil {
+			return fmt.Errorf("'%v' on SET operation with key : %s", err, key)
+		}
+	}
+	return nil
+}
+
 func (store *InMemory) Apply(records []wal.Record) error {
 	// iterate over records
 	for index, record := range records{

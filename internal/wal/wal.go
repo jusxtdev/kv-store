@@ -16,6 +16,35 @@ type WAL struct {
 
 // '|' is used as delimeter in Record strings (delimeted in Serialize()) 
 
+func (wal *WAL) SetOperationId() error {
+	var lastline string
+	// first get the last line in the wal log
+	file, err := os.Open(wal.logFilePath)
+	if err != nil {
+		return fmt.Errorf("cannot open wal log file - %s", wal.logFilePath)
+	}
+
+	// iterate on each line
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan(){
+		lastline = scanner.Text()
+	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error occurred while reading log file %s", err)
+	}
+
+	if len(lastline) == 0 {
+		wal.currentOprId = 0
+		return nil
+	}
+	rec, err := parseLine(lastline)
+	if err != nil {
+		return fmt.Errorf("error occurred while reading log file %s", err)
+	}
+	wal.currentOprId = rec.OpId + 1
+	return nil
+}
+
 func Open(logFilePath string) (*WAL, error) {
 	var file *os.File
 	var err error
@@ -30,8 +59,13 @@ func Open(logFilePath string) (*WAL, error) {
 	}
 	defer file.Close()
 
+	wal := WAL{logFilePath: logFilePath}
+	err = wal.SetOperationId()
+	if err != nil {
+		return nil, err
+	}
 	// return wal
-	return &WAL{logFilePath, 1}, nil
+	return &wal, nil
 }
 
 func (w *WAL) GetWALCheckpoint() int {
@@ -92,7 +126,7 @@ func (w *WAL) Close() error {
 	return nil
 }
 
-func (w *WAL)Replay() ([]Record, error) {
+func (w *WAL) Replay(checkpoint int) ([]Record, error) {
 	var records []Record
 
 	// open the wal logfile
@@ -110,6 +144,10 @@ func (w *WAL)Replay() ([]Record, error) {
 		if err != nil {
 			// skip current line if an error occurred
 			// might add the error info to a log file if there is one
+			continue
+		}
+		if rec.OpId < checkpoint{
+			// skip the record before and till the checkpoint
 			continue
 		}
 

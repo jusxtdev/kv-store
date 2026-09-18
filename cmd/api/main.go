@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"kvstore/internal/handler"
@@ -16,20 +17,25 @@ import (
 
 var WALFilePath = "wal.log"
 var SnapshotFilePath = "snapshot.json"
+var wg sync.WaitGroup
 
 func main(){
+	/* - - - - INITIALIZATION - - - - */
 	w, store, snap := Init(WALFilePath, SnapshotFilePath)
 
 	// replay wal log 
-	err := ReApplyWAL(w, store)
+	err := ReApplyWAL(w, store, snap)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// channel to communicate with ticker routine used by SnapLogger
+	// channel to communicate with ticker routine used to take snapshots
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go func(){
+	// a go routine which takes snapshot every 10 seconds
+	snapshotErr := make(chan error, 1)
+	wg.Add(1)
+	go func() {
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
@@ -38,9 +44,13 @@ func main(){
 			case <-ticker.C:
 				err := snap.TakeSnapshot()
 				if err != nil {
-					log.Fatalf("snapshot logging failed; refusing to continue : %v", err)
+					snapshotErr <- fmt.Errorf("snapshot logging failed; refusing to continue : %v", err)
+					wg.Done()
+					return
 				}
 			case <-ctx.Done():
+				snapshotErr <- nil
+				wg.Done()
 				return
 			}
 		}
@@ -52,7 +62,7 @@ func main(){
 	h := handler.NewHandler(store)
 	mux := http.NewServeMux()
 
-	/* -- ROUTES -- */
+	/* - - - - ROUTES - - - - */
 	mux.HandleFunc("GET /", handler.Health)
 
 	mux.HandleFunc("GET /kv", h.GETKeys)
@@ -80,11 +90,19 @@ func main(){
 		fmt.Printf("error : %s\n", err)
 	}
 
+	/* - - - - SHUTDOWN - - - - */
+	go func(){
+		cancel()
+		wg.Wait()
+	}()
+	err = <- snapshotErr
+	if err != nil {
+		log.Fatal(err)
+	}
 	// sync os file cache to hard-disk if any on shutdown
 	if err = w.Close(); err != nil {
 		log.Fatalf("cannot shutdown wal; error - %v", err)
 	}
-	cancel()
 }
 
 func Init(WALFilePath string, SnapshotFilePath string) (*wal.WAL, *repository.InMemory, *snapshot.Snap) {
@@ -97,15 +115,31 @@ func Init(WALFilePath string, SnapshotFilePath string) (*wal.WAL, *repository.In
 	store := repository.NewInMemoryStore(w)
 
 	snap := snapshot.NewSnapshotLogger(w, store, SnapshotFilePath)
+	err = snap.InitSnap()
+	if err != nil {
+		log.Fatalf("snapshot initialization failed; refusing to start : %v", err)
+	}
 
 	return w, store, snap
 }
 
-func ReApplyWAL(w *wal.WAL, store *repository.InMemory) error {
+func ReApplyWAL(w *wal.WAL, store *repository.InMemory, snap *snapshot.Snap) error {
+	latestSnap, err := snap.GetLatestSnapshot()
+	if err != nil {
+		return fmt.Errorf("cannot get latest snapshot : %v", err)
+	}
+
 	// replay the wal records after the store is created
-	records, err := w.Replay()
+	records, err := w.Replay(latestSnap.WalCheckpoint)
+
 	if err != nil {
 		return fmt.Errorf("WAL replay (parsing log file) failed; refusing to start %v", err)
+	}
+
+	// set latest state
+	err = store.SetState(latestSnap.State)
+	if err != nil {
+		return fmt.Errorf("cannot set last state : %v", err)
 	}
 
 	err = store.Apply(records)

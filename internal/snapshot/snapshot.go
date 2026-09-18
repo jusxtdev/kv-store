@@ -94,6 +94,14 @@ func (snap *Snap) TakeSnapshot() error{
 }
 
 func (snap *Snap) GetLatestSnapshot() (SnapRecord, error) {
+  // return if snapshot file is empty
+  if walCheckPoint := snap.wal.GetWALCheckpoint(); walCheckPoint == 0 {
+    return SnapRecord{
+      WalCheckpoint: 0,
+      State: make(repository.KVMap),
+    }, nil
+  } 
+
   data, err := os.ReadFile(snap.snapshotFilePath)
   if err != nil {
     return SnapRecord{}, fmt.Errorf("cannot read snapshot file : %v", err)
