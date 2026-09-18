@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 
 	"kvstore/internal/wal"
@@ -34,7 +35,10 @@ func (store *InMemory) EnableWAL() {
 }
 
 func (store *InMemory) GetCurrentState() KVMap {
-	return store.kvmap
+	store.mut.RLock()
+	defer store.mut.RUnlock()
+	currState := maps.Clone(store.kvmap)
+	return currState
 }
 
 func (store *InMemory) SetState(lastState map[string]string) error {

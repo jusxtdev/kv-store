@@ -7,9 +7,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type WAL struct {
+	mut *sync.RWMutex
 	logFilePath  string
 	currentOprId int // 1 based index for each record
 }
@@ -74,6 +76,8 @@ func (w *WAL) GetWALCheckpoint() int {
 	/*
 		Used to get the operation id of latest operation
 	*/
+	w.mut.RLock()
+	defer w.mut.RUnlock()
 	return w.currentOprId
 }
 
@@ -83,6 +87,9 @@ func (w *WAL) Serialize(operation, key, value string) []byte {
 }
 
 func (w *WAL) Write(record []byte) error {
+	w.mut.Lock()
+	defer w.mut.Unlock()
+
 	// open the file in append mode
 	f, err := os.OpenFile(
 		w.logFilePath,
@@ -110,6 +117,9 @@ func (w *WAL) Write(record []byte) error {
 }
 
 func (w *WAL) Close() error {
+	w.mut.Lock()
+	defer w.mut.Unlock()
+
 	// open log file
 	f, err := os.OpenFile(
 		w.logFilePath,
