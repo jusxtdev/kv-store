@@ -24,8 +24,8 @@ func TestSet(t *testing.T){
 	test_key := "y"
 	test_value := "54"
 
-	if s.Set(test_key, test_value); len(s.kvpair) != 1 {
-		t.Fatalf("expected %d, got %d", 1, len(s.kvpair))
+	if s.Set(test_key, test_value); len(s.kvmap) != 1 {
+		t.Fatalf("expected %d, got %d", 1, len(s.kvmap))
 	}
 }
 

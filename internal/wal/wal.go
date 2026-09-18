@@ -34,6 +34,13 @@ func Open(logFilePath string) (*WAL, error) {
 	return &WAL{logFilePath, 1}, nil
 }
 
+func (w *WAL) GetWALCheckpoint() int {
+	/*
+	Used to get the operation id of latest operation
+	*/
+	return w.currentOprId
+}
+
 func (w *WAL) Serialize(operation, key, value string) []byte {
 	r := fmt.Sprintf("%d|%s|%s|%s\n", w.currentOprId, operation, key, value)
 	return []byte(r)

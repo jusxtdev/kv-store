@@ -17,6 +17,7 @@ coverage.txt
 tmp/
 *.log
 wal.log
+snapshot.json
 
 # Editor and operating-system files
 .DS_Store

@@ -8,11 +8,13 @@ import (
 	"kvstore/internal/wal"
 )
 
+type KVMap map[string]string
+
 type InMemory struct {
 	mut *sync.RWMutex 
 	wal *wal.WAL
 	appendToWALFlag bool
-	kvpair map[string]string
+	kvmap KVMap
 }
 
 func NewInMemoryStore(w *wal.WAL)*InMemory{
@@ -21,13 +23,17 @@ func NewInMemoryStore(w *wal.WAL)*InMemory{
 	return &InMemory{
 		mut: new(sync.RWMutex),
 		wal: w,
-		kvpair: make(map[string]string),
+		kvmap: make(map[string]string),
 	}
 }
 
 func (store *InMemory) EnableWAL() {
 	store.appendToWALFlag = true
 }
+
+func (store *InMemory) GetCurrentState() KVMap {
+	return store.kvmap
+} 
 
 func (store *InMemory) Apply(records []wal.Record) error {
 	// iterate over records
@@ -85,7 +91,7 @@ func (store *InMemory)Set(key string, value string) error {
 	}
 
 	// set the key 
-	store.kvpair[key] = value
+	store.kvmap[key] = value
 	return nil
 }
 
@@ -98,7 +104,7 @@ func (store *InMemory)Get(key string) (string, error) {
 		return "", errors.New("key not found")
 	}
 
-	value := store.kvpair[key]
+	value := store.kvmap[key]
 	return value, nil
 }
 
@@ -120,7 +126,7 @@ func (store *InMemory)Update(key string, value string) error {
 		}
 	}
 
-	store.kvpair[key] = value
+	store.kvmap[key] = value
 	return nil
 }
 
@@ -142,7 +148,7 @@ func (store *InMemory)Delete(key string) error {
 		}
 	}
 
-	delete(store.kvpair, key)
+	delete(store.kvmap, key)
 	return nil
 }
 
@@ -162,7 +168,7 @@ func (store *InMemory)Keys() []string {
 	defer store.mut.RUnlock()
 
 	var allkeys []string
-	for key := range store.kvpair{
+	for key := range store.kvmap{
 		allkeys = append(allkeys, key)
 	}
 
@@ -191,7 +197,7 @@ func (store *InMemory) Clear() error {
 		}
 	}
 
-	clear(store.kvpair)
+	clear(store.kvmap)
 	return nil
 }
 
@@ -200,7 +206,7 @@ func (store *InMemory) Clear() error {
 func (store *InMemory)keyExists(key string) bool {
 	// assume that the caller already does mut.Lock i.e. prevent deadlock
 
-	_, ok := store.kvpair[key]
+	_, ok := store.kvmap[key]
 	if ok {
 		return true
 	} else {
@@ -215,7 +221,7 @@ var SeedData = map[string]string{
 	"pi" : "3.14", 
 }
 func (store *InMemory)Seed(){
-	for k,v := range store.kvpair{
+	for k,v := range store.kvmap{
 		store.Set(k, v)
 	}
 }
