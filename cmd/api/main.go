@@ -84,31 +84,6 @@ func main() {
 	}
 }
 
-// startSnapshotTimer takes a snapshot every 10 seconds until the context ends.
-func startSnapshotTimer(ctx context.Context, snap *snapshot.Snap, snapshotErr chan<- error) {
-	wg.Add(1)
-	go func() {
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				err := snap.TakeSnapshot()
-				if err != nil {
-					snapshotErr <- fmt.Errorf("snapshot logging failed; refusing to continue : %v", err)
-					wg.Done()
-					return
-				}
-			case <-ctx.Done():
-				snapshotErr <- nil
-				wg.Done()
-				return
-			}
-		}
-	}()
-}
-
 func Init(WALFilePath string, SnapshotFilePath string) (*wal.WAL, *repository.InMemory, *snapshot.Snap) {
 	// wal object used by the store service for write-ahead logging
 	w, err := wal.Open(WALFilePath)
@@ -151,4 +126,29 @@ func ReApplyWAL(w *wal.WAL, store *repository.InMemory, snap *snapshot.Snap) err
 		return fmt.Errorf("WAL replay (applying records) failed; refusing to start %v", err)
 	}
 	return nil
+}
+
+// startSnapshotTimer takes a snapshot every 10 seconds until the context ends.
+func startSnapshotTimer(ctx context.Context, snap *snapshot.Snap, snapshotErr chan<- error) {
+	wg.Add(1)
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				err := snap.TakeSnapshot()
+				if err != nil {
+					snapshotErr <- fmt.Errorf("snapshot logging failed; refusing to continue : %v", err)
+					wg.Done()
+					return
+				}
+			case <-ctx.Done():
+				snapshotErr <- nil
+				wg.Done()
+				return
+			}
+		}
+	}()
 }

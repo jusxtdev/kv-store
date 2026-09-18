@@ -27,6 +27,8 @@ func NewInMemoryStore(w *wal.WAL) *InMemory {
 	}
 }
 
+// State restoration and WAL configuration.
+
 func (store *InMemory) EnableWAL() {
 	store.appendToWALFlag = true
 }
@@ -80,8 +82,9 @@ func (store *InMemory) Apply(records []wal.Record) error {
 	return nil
 }
 
+// Key-value operations.
+
 func (store *InMemory) Set(key string, value string) error {
-	// mutex lock
 	store.mut.Lock()
 	defer store.mut.Unlock()
 
@@ -100,7 +103,6 @@ func (store *InMemory) Set(key string, value string) error {
 		}
 	}
 
-	// set the key
 	store.kvmap[key] = value
 	return nil
 }
@@ -211,7 +213,7 @@ func (store *InMemory) Clear() error {
 	return nil
 }
 
-/* === HELPERS === */
+// Internal helpers.
 
 func (store *InMemory) keyExists(key string) bool {
 	// assume that the caller already does mut.Lock i.e. prevent deadlock

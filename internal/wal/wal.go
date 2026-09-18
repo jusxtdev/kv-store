@@ -14,8 +14,31 @@ type WAL struct {
 	currentOprId int // 1 based index for each record
 }
 
-// '|' is used as delimeter in Record strings (delimeted in Serialize())
+// Open creates a WAL when its file is absent and initializes its operation ID.
+func Open(logFilePath string) (*WAL, error) {
+	var file *os.File
+	var err error
 
+	// if file doesn't exist
+	_, err = os.Stat(logFilePath)
+	if os.IsNotExist(err) {
+		file, err = os.Create(logFilePath)
+		if err != nil {
+			return nil, errors.New("cannot create wal file")
+		}
+	}
+	defer file.Close()
+
+	wal := WAL{logFilePath: logFilePath}
+	err = wal.SetOperationId()
+	if err != nil {
+		return nil, err
+	}
+	// return wal
+	return &wal, nil
+}
+
+// SetOperationId initializes the next operation ID from the last WAL record.
 func (wal *WAL) SetOperationId() error {
 	var lastline string
 	// first get the last line in the wal log
@@ -45,28 +68,7 @@ func (wal *WAL) SetOperationId() error {
 	return nil
 }
 
-func Open(logFilePath string) (*WAL, error) {
-	var file *os.File
-	var err error
-
-	// if file doesn't exist
-	_, err = os.Stat(logFilePath)
-	if os.IsNotExist(err) {
-		file, err = os.Create(logFilePath)
-		if err != nil {
-			return nil, errors.New("cannot create wal file")
-		}
-	}
-	defer file.Close()
-
-	wal := WAL{logFilePath: logFilePath}
-	err = wal.SetOperationId()
-	if err != nil {
-		return nil, err
-	}
-	// return wal
-	return &wal, nil
-}
+// '|' is used as delimeter in Record strings (delimeted in Serialize()).
 
 func (w *WAL) GetWALCheckpoint() int {
 	/*

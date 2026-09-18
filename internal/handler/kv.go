@@ -3,8 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"kvstore/internal/repository"
 	"net/http"
+
+	"kvstore/internal/repository"
 )
 
 type Handler struct {
@@ -15,6 +16,27 @@ func NewHandler(store repository.StoreRepository) *Handler {
 	return &Handler{
 		store: store,
 	}
+}
+
+type POSTRequestBody struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type PUTRequestBody struct {
+	Value string `json:"value"`
+}
+
+// Read handlers.
+
+func (h *Handler) GETKeys(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+
+	allkeys := h.store.Keys()
+	WriteJSONResponse(w, http.StatusOK, Response{true, "all keys", allkeys})
 }
 
 func (h *Handler) GETvalue(w http.ResponseWriter, r *http.Request) {
@@ -34,10 +56,22 @@ func (h *Handler) GETvalue(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, Response{true, "value for key found", val})
 }
 
-type POSTRequestBody struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+func (h *Handler) GETExists(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
+		return
+	}
+
+	key := r.PathValue("key")
+	exists := h.store.Exists(key)
+	if exists {
+		WriteJSONResponse(w, http.StatusOK, Response{true, "key exists", nil})
+		return
+	}
+	WriteJSONResponse(w, http.StatusNotFound, Response{false, "key not found", nil})
 }
+
+// Write handlers.
 
 func (h *Handler) POSTkeyvalue(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -48,7 +82,6 @@ func (h *Handler) POSTkeyvalue(w http.ResponseWriter, r *http.Request) {
 	var body POSTRequestBody
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-
 	err := decoder.Decode(&body)
 	if err != nil {
 		WriteJSONResponse(w, http.StatusBadRequest, Response{false, "invalid json", nil})
@@ -62,10 +95,6 @@ func (h *Handler) POSTkeyvalue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSONResponse(w, http.StatusCreated, Response{true, "key added successfully", nil})
-}
-
-type PUTRequestBody struct {
-	Value string `json:"value"`
 }
 
 func (h *Handler) PUTvalue(w http.ResponseWriter, r *http.Request) {
@@ -109,31 +138,6 @@ func (h *Handler) DELvalue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSONResponse(w, http.StatusOK, Response{true, "deleted key successfully", nil})
-}
-
-func (h *Handler) GETExists(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeMethodNotAllowed(w)
-		return
-	}
-
-	key := r.PathValue("key")
-	exists := h.store.Exists(key)
-	if exists {
-		WriteJSONResponse(w, http.StatusOK, Response{true, "key exists", nil})
-		return
-	}
-	WriteJSONResponse(w, http.StatusNotFound, Response{false, "key not found", nil})
-}
-
-func (h *Handler) GETKeys(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeMethodNotAllowed(w)
-		return
-	}
-
-	allkeys := h.store.Keys()
-	WriteJSONResponse(w, http.StatusOK, Response{true, "all keys", allkeys})
 }
 
 func (h *Handler) POSTClear(w http.ResponseWriter, r *http.Request) {
