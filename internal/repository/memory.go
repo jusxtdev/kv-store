@@ -11,18 +11,18 @@ import (
 type KVMap map[string]string
 
 type InMemory struct {
-	mut *sync.RWMutex 
-	wal *wal.WAL
+	mut             *sync.RWMutex
+	wal             *wal.WAL
 	appendToWALFlag bool
-	kvmap KVMap
+	kvmap           KVMap
 }
 
-func NewInMemoryStore(w *wal.WAL)*InMemory{
+func NewInMemoryStore(w *wal.WAL) *InMemory {
 	// initialize the map (and mutex) to prevent
 	// panic: runtime error: assignment to entry in nil map
 	return &InMemory{
-		mut: new(sync.RWMutex),
-		wal: w,
+		mut:   new(sync.RWMutex),
+		wal:   w,
 		kvmap: make(map[string]string),
 	}
 }
@@ -33,7 +33,7 @@ func (store *InMemory) EnableWAL() {
 
 func (store *InMemory) GetCurrentState() KVMap {
 	return store.kvmap
-} 
+}
 
 func (store *InMemory) SetState(lastState map[string]string) error {
 	for key, value := range lastState {
@@ -47,9 +47,9 @@ func (store *InMemory) SetState(lastState map[string]string) error {
 
 func (store *InMemory) Apply(records []wal.Record) error {
 	// iterate over records
-	for index, record := range records{
+	for index, record := range records {
 		// match the operation
-		switch record.Operation{
+		switch record.Operation {
 		case wal.Set:
 			key := record.Key
 			value := record.Value
@@ -75,12 +75,12 @@ func (store *InMemory) Apply(records []wal.Record) error {
 			if err != nil {
 				return fmt.Errorf("'%v' on CLEAR operation with index(0-based) %d", err, index)
 			}
-		} 
+		}
 	}
 	return nil
 }
 
-func (store *InMemory)Set(key string, value string) error {
+func (store *InMemory) Set(key string, value string) error {
 	// mutex lock
 	store.mut.Lock()
 	defer store.mut.Unlock()
@@ -100,12 +100,12 @@ func (store *InMemory)Set(key string, value string) error {
 		}
 	}
 
-	// set the key 
+	// set the key
 	store.kvmap[key] = value
 	return nil
 }
 
-func (store *InMemory)Get(key string) (string, error) {
+func (store *InMemory) Get(key string) (string, error) {
 	store.mut.RLock()
 	defer store.mut.RUnlock()
 
@@ -118,15 +118,15 @@ func (store *InMemory)Get(key string) (string, error) {
 	return value, nil
 }
 
-func (store *InMemory)Update(key string, value string) error {
+func (store *InMemory) Update(key string, value string) error {
 	store.mut.Lock()
 	defer store.mut.Unlock()
 
 	exists := store.keyExists(key)
-	if !exists{
+	if !exists {
 		return errors.New("key not found")
 	}
-	
+
 	// first log the operation to wal
 	if store.appendToWALFlag {
 		record := store.wal.Serialize("UPDATE", key, value)
@@ -140,12 +140,12 @@ func (store *InMemory)Update(key string, value string) error {
 	return nil
 }
 
-func (store *InMemory)Delete(key string) error {
+func (store *InMemory) Delete(key string) error {
 	store.mut.Lock()
 	defer store.mut.Unlock()
 
 	exists := store.keyExists(key)
-	if !exists{
+	if !exists {
 		return errors.New("key not found")
 	}
 
@@ -162,23 +162,23 @@ func (store *InMemory)Delete(key string) error {
 	return nil
 }
 
-func (store *InMemory)Exists(key string) bool {
+func (store *InMemory) Exists(key string) bool {
 	store.mut.RLock()
 	defer store.mut.RUnlock()
 
 	exists := store.keyExists(key)
-	if exists{
+	if exists {
 		return true
 	}
 	return false
 }
 
-func (store *InMemory)Keys() []string {
+func (store *InMemory) Keys() []string {
 	store.mut.RLock()
 	defer store.mut.RUnlock()
 
 	var allkeys []string
-	for key := range store.kvmap{
+	for key := range store.kvmap {
 		allkeys = append(allkeys, key)
 	}
 
@@ -187,13 +187,13 @@ func (store *InMemory)Keys() []string {
 
 func (store *InMemory) Clear() error {
 	/*
-	TWO CHOICES
-	1 either clear the wal.log file so that old operations are removed hence space is saved
-	2 or keep the clear operation as it is and skip the entries before clear while replaying
-	
-	if we clear the wal.log file and then the program crashes before clearing the in-memory
-	then there is no way to recover the latest state
-	Hence, i'll keep the wal.log file as it is for the MVP
+		TWO CHOICES
+		1 either clear the wal.log file so that old operations are removed hence space is saved
+		2 or keep the clear operation as it is and skip the entries before clear while replaying
+
+		if we clear the wal.log file and then the program crashes before clearing the in-memory
+		then there is no way to recover the latest state
+		Hence, i'll keep the wal.log file as it is for the MVP
 	*/
 	store.mut.Lock()
 	defer store.mut.Unlock()
@@ -213,7 +213,7 @@ func (store *InMemory) Clear() error {
 
 /* === HELPERS === */
 
-func (store *InMemory)keyExists(key string) bool {
+func (store *InMemory) keyExists(key string) bool {
 	// assume that the caller already does mut.Lock i.e. prevent deadlock
 
 	_, ok := store.kvmap[key]
@@ -225,13 +225,14 @@ func (store *InMemory)keyExists(key string) bool {
 }
 
 var SeedData = map[string]string{
-	"name" : "yingshai",
-	"game" : "nine sols",
-	"x" : "12",
-	"pi" : "3.14", 
+	"name": "yingshai",
+	"game": "nine sols",
+	"x":    "12",
+	"pi":   "3.14",
 }
-func (store *InMemory)Seed(){
-	for k,v := range store.kvmap{
+
+func (store *InMemory) Seed() {
+	for k, v := range store.kvmap {
 		store.Set(k, v)
 	}
 }

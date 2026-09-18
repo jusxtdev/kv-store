@@ -19,11 +19,11 @@ var WALFilePath = "wal.log"
 var SnapshotFilePath = "snapshot.json"
 var wg sync.WaitGroup
 
-func main(){
+func main() {
 	/* - - - - INITIALIZATION - - - - */
 	w, store, snap := Init(WALFilePath, SnapshotFilePath)
 
-	// replay wal log 
+	// replay wal log
 	err := ReApplyWAL(w, store, snap)
 	if err != nil {
 		log.Fatal(err)
@@ -32,29 +32,8 @@ func main(){
 	// channel to communicate with ticker routine used to take snapshots
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// a go routine which takes snapshot every 10 seconds
 	snapshotErr := make(chan error, 1)
-	wg.Add(1)
-	go func() {
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				err := snap.TakeSnapshot()
-				if err != nil {
-					snapshotErr <- fmt.Errorf("snapshot logging failed; refusing to continue : %v", err)
-					wg.Done()
-					return
-				}
-			case <-ctx.Done():
-				snapshotErr <- nil
-				wg.Done()
-				return
-			}
-		}
-	}()
+	startSnapshotTimer(ctx, snap, snapshotErr)
 
 	// enable Allow services to log to WAL after the replay
 	store.EnableWAL()
@@ -84,18 +63,18 @@ func main(){
 	mux.HandleFunc("DELETE /kv/{key}/", h.DELvalue)
 
 	err = http.ListenAndServe(":8080", mux)
-	if errors.Is(err, http.ErrServerClosed){
+	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Println("Server Closed")
-	} else if err != nil{
+	} else if err != nil {
 		fmt.Printf("error : %s\n", err)
 	}
 
 	/* - - - - SHUTDOWN - - - - */
-	go func(){
+	go func() {
 		cancel()
 		wg.Wait()
 	}()
-	err = <- snapshotErr
+	err = <-snapshotErr
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -105,12 +84,37 @@ func main(){
 	}
 }
 
+// startSnapshotTimer takes a snapshot every 10 seconds until the context ends.
+func startSnapshotTimer(ctx context.Context, snap *snapshot.Snap, snapshotErr chan<- error) {
+	wg.Add(1)
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				err := snap.TakeSnapshot()
+				if err != nil {
+					snapshotErr <- fmt.Errorf("snapshot logging failed; refusing to continue : %v", err)
+					wg.Done()
+					return
+				}
+			case <-ctx.Done():
+				snapshotErr <- nil
+				wg.Done()
+				return
+			}
+		}
+	}()
+}
+
 func Init(WALFilePath string, SnapshotFilePath string) (*wal.WAL, *repository.InMemory, *snapshot.Snap) {
 	// wal object used by the store service for write-ahead logging
 	w, err := wal.Open(WALFilePath)
 	if err != nil {
 		log.Fatalf("WAL initialization failed; refusing to start: %v", err)
-	}	
+	}
 
 	store := repository.NewInMemoryStore(w)
 

@@ -15,11 +15,11 @@ func NewHandler(store repository.StoreRepository) *Handler {
 	return &Handler{
 		store: store,
 	}
-} 
+}
 
-func (h *Handler) GETvalue(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodGet{
-		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
+func (h *Handler) GETvalue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -35,12 +35,13 @@ func (h *Handler) GETvalue(w http.ResponseWriter, r *http.Request){
 }
 
 type POSTRequestBody struct {
-	Key string `json:"key"`
+	Key   string `json:"key"`
 	Value string `json:"value"`
 }
-func (h *Handler) POSTkeyvalue(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodPost{
-		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
+
+func (h *Handler) POSTkeyvalue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -66,9 +67,10 @@ func (h *Handler) POSTkeyvalue(w http.ResponseWriter, r *http.Request){
 type PUTRequestBody struct {
 	Value string `json:"value"`
 }
-func (h *Handler) PUTvalue(w http.ResponseWriter, r *http.Request){
-	if r.Method != http.MethodPut{
-		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
+
+func (h *Handler) PUTvalue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -93,13 +95,13 @@ func (h *Handler) PUTvalue(w http.ResponseWriter, r *http.Request){
 }
 
 func (h *Handler) DELvalue(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete{
-		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
+	if r.Method != http.MethodDelete {
+		writeMethodNotAllowed(w)
 		return
 	}
 
 	key := r.PathValue("key")
-	
+
 	err := h.store.Delete(key)
 	if err != nil {
 		WriteJSONResponse(w, http.StatusNotFound, Response{false, err.Error(), nil})
@@ -109,15 +111,15 @@ func (h *Handler) DELvalue(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, Response{true, "deleted key successfully", nil})
 }
 
-func (h *Handler) GETExists(w http.ResponseWriter, r *http.Request){
+func (h *Handler) GETExists(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
+		writeMethodNotAllowed(w)
 		return
 	}
 
 	key := r.PathValue("key")
 	exists := h.store.Exists(key)
-	if exists{
+	if exists {
 		WriteJSONResponse(w, http.StatusOK, Response{true, "key exists", nil})
 		return
 	}
@@ -126,7 +128,7 @@ func (h *Handler) GETExists(w http.ResponseWriter, r *http.Request){
 
 func (h *Handler) GETKeys(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -134,9 +136,9 @@ func (h *Handler) GETKeys(w http.ResponseWriter, r *http.Request) {
 	WriteJSONResponse(w, http.StatusOK, Response{true, "all keys", allkeys})
 }
 
-func (h *Handler) POSTClear(w http.ResponseWriter, r *http.Request){
+func (h *Handler) POSTClear(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		WriteJSONResponse(w, http.StatusMethodNotAllowed, Response{false, "method not allowed", nil})
+		writeMethodNotAllowed(w)
 		return
 	}
 	if err := h.store.Clear(); err != nil {

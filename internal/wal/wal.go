@@ -10,11 +10,11 @@ import (
 )
 
 type WAL struct {
-	logFilePath string
-	currentOprId int	// 1 based index for each record
+	logFilePath  string
+	currentOprId int // 1 based index for each record
 }
 
-// '|' is used as delimeter in Record strings (delimeted in Serialize()) 
+// '|' is used as delimeter in Record strings (delimeted in Serialize())
 
 func (wal *WAL) SetOperationId() error {
 	var lastline string
@@ -26,7 +26,7 @@ func (wal *WAL) SetOperationId() error {
 
 	// iterate on each line
 	scanner := bufio.NewScanner(file)
-	for scanner.Scan(){
+	for scanner.Scan() {
 		lastline = scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
@@ -51,7 +51,7 @@ func Open(logFilePath string) (*WAL, error) {
 
 	// if file doesn't exist
 	_, err = os.Stat(logFilePath)
-	if os.IsNotExist(err){
+	if os.IsNotExist(err) {
 		file, err = os.Create(logFilePath)
 		if err != nil {
 			return nil, errors.New("cannot create wal file")
@@ -70,7 +70,7 @@ func Open(logFilePath string) (*WAL, error) {
 
 func (w *WAL) GetWALCheckpoint() int {
 	/*
-	Used to get the operation id of latest operation
+		Used to get the operation id of latest operation
 	*/
 	return w.currentOprId
 }
@@ -94,7 +94,7 @@ func (w *WAL) Write(record []byte) error {
 
 	// increment wal operation id
 	w.currentOprId = w.currentOprId + 1
-	
+
 	// write bytes to the operating systems file cache
 	if _, err := f.Write(record); err != nil {
 		return fmt.Errorf("cannot write to wal log file - %s, record - %s", w.logFilePath, string(record))
@@ -137,16 +137,16 @@ func (w *WAL) Replay(checkpoint int) ([]Record, error) {
 
 	// iterate on each line
 	scanner := bufio.NewScanner(file)
-	for scanner.Scan(){
+	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		rec, err := parseLine(line)
 		if err != nil {
 			// skip current line if an error occurred
 			// might add the error info to a log file if there is one
 			continue
 		}
-		if rec.OpId < checkpoint{
+		if rec.OpId < checkpoint {
 			// skip the record before and till the checkpoint
 			continue
 		}
@@ -171,7 +171,6 @@ func parseLine(line string) (Record, error) {
 	lineSlice := strings.Split(line, "|")
 	// if the line is like - "hello there" i.e. neither a valid delimeter nor a valid operation written
 	// then an empty record with error is returned
-
 
 	// parse operation
 	var operation Operation

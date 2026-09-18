@@ -31,87 +31,87 @@ import (
 )
 
 type Snap struct {
-  snapshotFilePath string
-  wal *wal.WAL
-  store *repository.InMemory
+	snapshotFilePath string
+	wal              *wal.WAL
+	store            *repository.InMemory
 }
 
 type SnapRecord struct {
-  WalCheckpoint int `json:"wal_checkpoint"`
-  State repository.KVMap `json:"data"`
+	WalCheckpoint int              `json:"wal_checkpoint"`
+	State         repository.KVMap `json:"data"`
 }
 
 func NewSnapshotLogger(wal *wal.WAL, store *repository.InMemory, path string) *Snap {
-  /*
-  return a pointer to Snap object to interat with SnapShot logger
-  */
-  snap := &Snap{
-    wal: wal,
-    store: store,
-    snapshotFilePath: path,
-  }
-  return snap
+	/*
+	  return a pointer to Snap object to interat with SnapShot logger
+	*/
+	snap := &Snap{
+		wal:              wal,
+		store:            store,
+		snapshotFilePath: path,
+	}
+	return snap
 }
 
 func (snap *Snap) InitSnap() error {
-  /*
-  Initialize the snap log file
-  */
-  var file *os.File
-  var err error
+	/*
+	  Initialize the snap log file
+	*/
+	var file *os.File
+	var err error
 
-  _, err = os.Stat(snap.snapshotFilePath)
-  if os.IsNotExist(err){
-    file, err = os.Create(snap.snapshotFilePath)
+	_, err = os.Stat(snap.snapshotFilePath)
+	if os.IsNotExist(err) {
+		file, err = os.Create(snap.snapshotFilePath)
 		if err != nil {
 			return errors.New("cannot create snapshot file")
 		}
-  }
-  defer file.Close()
+	}
+	defer file.Close()
 
-  return nil
+	return nil
 }
 
-func (snap *Snap) TakeSnapshot() error{
-  state := snap.store.GetCurrentState()
-  walCheckpoint := snap.wal.GetWALCheckpoint()
-  record := SnapRecord{
-    WalCheckpoint: walCheckpoint,
-    State: state,
-  }
+func (snap *Snap) TakeSnapshot() error {
+	state := snap.store.GetCurrentState()
+	walCheckpoint := snap.wal.GetWALCheckpoint()
+	record := SnapRecord{
+		WalCheckpoint: walCheckpoint,
+		State:         state,
+	}
 
-  data, err := json.Marshal(record)
-  if err != nil {
-    return fmt.Errorf("cannot marshal state record : %v", err)
-  }
+	data, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("cannot marshal state record : %v", err)
+	}
 
-  err = os.WriteFile(snap.snapshotFilePath, data, 0644)
-  if err != nil {
-    return fmt.Errorf("cannot write snapshot : %v", err)
-  }
+	err = os.WriteFile(snap.snapshotFilePath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("cannot write snapshot : %v", err)
+	}
 
-  return nil
+	return nil
 }
 
 func (snap *Snap) GetLatestSnapshot() (SnapRecord, error) {
-  // return if snapshot file is empty
-  if walCheckPoint := snap.wal.GetWALCheckpoint(); walCheckPoint == 0 {
-    return SnapRecord{
-      WalCheckpoint: 0,
-      State: make(repository.KVMap),
-    }, nil
-  } 
+	// return if snapshot file is empty
+	if walCheckPoint := snap.wal.GetWALCheckpoint(); walCheckPoint == 0 {
+		return SnapRecord{
+			WalCheckpoint: 0,
+			State:         make(repository.KVMap),
+		}, nil
+	}
 
-  data, err := os.ReadFile(snap.snapshotFilePath)
-  if err != nil {
-    return SnapRecord{}, fmt.Errorf("cannot read snapshot file : %v", err)
-  }
+	data, err := os.ReadFile(snap.snapshotFilePath)
+	if err != nil {
+		return SnapRecord{}, fmt.Errorf("cannot read snapshot file : %v", err)
+	}
 
-  var record SnapRecord
+	var record SnapRecord
 
-  err = json.Unmarshal(data, &record)
-  if err != nil {
-    return SnapRecord{}, fmt.Errorf("cannot unmarshal snapshot file : %v", err)
-  }
-  return record, nil
+	err = json.Unmarshal(data, &record)
+	if err != nil {
+		return SnapRecord{}, fmt.Errorf("cannot unmarshal snapshot file : %v", err)
+	}
+	return record, nil
 }

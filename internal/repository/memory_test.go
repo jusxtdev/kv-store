@@ -18,7 +18,7 @@ func newInMemStore(t *testing.T) *InMemory {
 	return store
 }
 
-func TestSet(t *testing.T){
+func TestSet(t *testing.T) {
 	s := newInMemStore(t)
 
 	test_key := "y"
@@ -29,7 +29,7 @@ func TestSet(t *testing.T){
 	}
 }
 
-func TestGet(t *testing.T){
+func TestGet(t *testing.T) {
 	s := newInMemStore(t)
 
 	test_key := "x"
@@ -41,7 +41,7 @@ func TestGet(t *testing.T){
 	}
 }
 
-func TestUpdate(t *testing.T){
+func TestUpdate(t *testing.T) {
 	s := newInMemStore(t)
 
 	// seed data
@@ -57,7 +57,7 @@ func TestUpdate(t *testing.T){
 	}
 }
 
-func TestDelete(t *testing.T){
+func TestDelete(t *testing.T) {
 	s := newInMemStore(t)
 
 	// seed data
@@ -67,20 +67,20 @@ func TestDelete(t *testing.T){
 
 	// test delete
 	s.Delete(test_key)
-	if _, err := s.Get(test_key); err == nil{
+	if _, err := s.Get(test_key); err == nil {
 		t.Fatalf("expected not found error, got \"%s\"", err)
 	}
 }
 
-func TestExistsFalse(t *testing.T){
+func TestExistsFalse(t *testing.T) {
 	s := newInMemStore(t)
 
-	if got := s.Exists("inexistent key"); got != false{
+	if got := s.Exists("inexistent key"); got != false {
 		t.Fatalf("expected false, got %t", got)
 	}
 }
 
-func TestExistsTrue(t *testing.T){
+func TestExistsTrue(t *testing.T) {
 	s := newInMemStore(t)
 
 	// seed data
@@ -88,21 +88,21 @@ func TestExistsTrue(t *testing.T){
 	test_value := "12"
 	s.Set(test_key, test_value)
 
-	if got := s.Exists(test_key); got != true{
+	if got := s.Exists(test_key); got != true {
 		t.Fatalf("expected true, got %t", got)
 	}
 }
 
-func TestKeys(t *testing.T){
+func TestKeys(t *testing.T) {
 	s := newInMemStore(t)
 
 	// seed data
 	test_data := map[string]string{
-		"x" : "2",
-		"y" : "34",
-		"z" : "1212",
+		"x": "2",
+		"y": "34",
+		"z": "1212",
 	}
-	for k,v := range test_data{
+	for k, v := range test_data {
 		s.Set(k, v)
 	}
 
@@ -112,16 +112,16 @@ func TestKeys(t *testing.T){
 	}
 }
 
-func TestClear(t *testing.T){
+func TestClear(t *testing.T) {
 	s := newInMemStore(t)
 
 	// seed data
 	test_data := map[string]string{
-		"x" : "2",
-		"y" : "34",
-		"z" : "1212",
+		"x": "2",
+		"y": "34",
+		"z": "1212",
 	}
-	for k,v := range test_data{
+	for k, v := range test_data {
 		s.Set(k, v)
 	}
 
@@ -133,7 +133,7 @@ func TestClear(t *testing.T){
 }
 
 // Concurrent tests
-func TestConcurrentWrites(t *testing.T){
+func TestConcurrentWrites(t *testing.T) {
 	s := newInMemStore(t)
 
 	var wg sync.WaitGroup
@@ -141,7 +141,7 @@ func TestConcurrentWrites(t *testing.T){
 	for i := range 100 {
 		wg.Add(1)
 
-		go func(i int){
+		go func(i int) {
 			defer wg.Done()
 			s.Set(strconv.Itoa(i), strconv.Itoa(i*5))
 		}(i)
@@ -154,8 +154,8 @@ func TestConcurrentWrites(t *testing.T){
 	}
 	// test each key
 	for i := range 100 {
-		val,_ := s.Get(strconv.Itoa(i))
-		if val != strconv.Itoa(i*5){
+		val, _ := s.Get(strconv.Itoa(i))
+		if val != strconv.Itoa(i*5) {
 			t.Fatalf("expected value %d for key = %d, got %s", i*5, i, val)
 		}
 	}

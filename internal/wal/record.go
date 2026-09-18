@@ -9,9 +9,9 @@ const (
 	Clear
 )
 
-type Record struct{
-	OpId int
+type Record struct {
+	OpId      int
 	Operation Operation
-	Key string
-	Value string
+	Key       string
+	Value     string
 }
